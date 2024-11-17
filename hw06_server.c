@@ -39,9 +39,17 @@ int main() {
     printf("Server listening on port %d...\n", PORT);
 
     client1_fd = accept(server_fd, NULL, NULL);
+    if (client1_fd < 0) {
+        perror("Accept failed for Client #1");
+        exit(EXIT_FAILURE);
+    }
     printf("Client #1 connected.\n");
 
     client2_fd = accept(server_fd, NULL, NULL);
+    if (client2_fd < 0) {
+        perror("Accept failed for Client #2");
+        exit(EXIT_FAILURE);
+    }
     printf("Client #2 connected.\n");
 
     FD_ZERO(&read_fds);
@@ -57,21 +65,27 @@ int main() {
             exit(EXIT_FAILURE);
         }
 
+        // Check Client #1
         if (FD_ISSET(client1_fd, &temp_fds)) {
             memset(buffer, 0, BUFFER_SIZE);
             int bytes_read = read(client1_fd, buffer, BUFFER_SIZE);
             if (bytes_read > 0) {
-                printf("Forward: %s", buffer);
+                printf("Forward [%d] ---> [%d]\n", client1_fd, client2_fd);
                 send(client2_fd, buffer, bytes_read, 0);
+            } else {
+                break;
             }
         }
 
+        // Check Client #2
         if (FD_ISSET(client2_fd, &temp_fds)) {
             memset(buffer, 0, BUFFER_SIZE);
             int bytes_read = read(client2_fd, buffer, BUFFER_SIZE);
             if (bytes_read > 0) {
-                printf("Backward: %s", buffer);
+                printf("Backward [%d] ---> [%d]\n", client2_fd, client1_fd);
                 send(client1_fd, buffer, bytes_read, 0);
+            } else {
+                break;
             }
         }
     }
