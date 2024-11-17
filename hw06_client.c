@@ -33,12 +33,12 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    printf("Choose mode (s: Sender, r: Receiver): ");
+    printf("Choose mode (1: Sender, 2: Receiver): ");
     scanf(" %c", &mode);
 
-    if (mode == 's') {
+    if (mode == '1') {
         sender_mode(sock_fd);
-    } else if (mode == 'r') {
+    } else if (mode == '2') {
         receiver_mode(sock_fd);
     } else {
         printf("Invalid mode selected.\n");
