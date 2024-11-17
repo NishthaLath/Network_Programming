@@ -6,7 +6,7 @@
 #include <sys/select.h>
 #include <fcntl.h>
 
-#define PORT 8080
+#define PORT 9190
 #define BUFFER_SIZE 2048
 
 void sender_mode(int sock_fd);
