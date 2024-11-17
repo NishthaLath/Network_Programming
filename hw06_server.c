@@ -4,105 +4,80 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/select.h>
-#include <fcntl.h>
 
 #define PORT 9190
 #define BUFFER_SIZE 2048
 
-void sender_mode(int sock_fd);
-void receiver_mode(int sock_fd);
-
 int main() {
-    int sock_fd;
+    int server_fd, client1_fd, client2_fd;
     struct sockaddr_in server_addr;
-    char mode;
+    fd_set read_fds, temp_fds;
+    char buffer[BUFFER_SIZE];
+    int max_fd;
 
-    // Initialize socket
-    sock_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock_fd < 0) {
+    // Initialize server socket
+    server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_fd < 0) {
         perror("Socket creation failed");
         exit(EXIT_FAILURE);
     }
 
     server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(PORT);
 
-    if (connect(sock_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-        perror("Connection failed");
+    if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+        perror("Bind failed");
         exit(EXIT_FAILURE);
     }
 
-    printf("Choose mode (1: Sender, 2: Receiver): ");
-    scanf(" %c", &mode);
-
-    if (mode == '1') {
-        sender_mode(sock_fd);
-    } else if (mode == '2') {
-        receiver_mode(sock_fd);
-    } else {
-        printf("Invalid mode selected.\n");
+    if (listen(server_fd, 2) < 0) {
+        perror("Listen failed");
+        exit(EXIT_FAILURE);
     }
 
-    close(sock_fd);
+    printf("Server listening on port %d...\n", PORT);
+
+    client1_fd = accept(server_fd, NULL, NULL);
+    printf("Client #1 connected.\n");
+
+    client2_fd = accept(server_fd, NULL, NULL);
+    printf("Client #2 connected.\n");
+
+    FD_ZERO(&read_fds);
+    FD_SET(client1_fd, &read_fds);
+    FD_SET(client2_fd, &read_fds);
+    max_fd = (client1_fd > client2_fd) ? client1_fd : client2_fd;
+
+    while (1) {
+        temp_fds = read_fds;
+
+        if (select(max_fd + 1, &temp_fds, NULL, NULL, NULL) < 0) {
+            perror("Select error");
+            exit(EXIT_FAILURE);
+        }
+
+        if (FD_ISSET(client1_fd, &temp_fds)) {
+            memset(buffer, 0, BUFFER_SIZE);
+            int bytes_read = read(client1_fd, buffer, BUFFER_SIZE);
+            if (bytes_read > 0) {
+                printf("Forward: %s", buffer);
+                send(client2_fd, buffer, bytes_read, 0);
+            }
+        }
+
+        if (FD_ISSET(client2_fd, &temp_fds)) {
+            memset(buffer, 0, BUFFER_SIZE);
+            int bytes_read = read(client2_fd, buffer, BUFFER_SIZE);
+            if (bytes_read > 0) {
+                printf("Backward: %s", buffer);
+                send(client1_fd, buffer, bytes_read, 0);
+            }
+        }
+    }
+
+    close(client1_fd);
+    close(client2_fd);
+    close(server_fd);
     return 0;
-}
-
-void sender_mode(int sock_fd) {
-    int file_fd = open("rfc1180.txt", O_RDONLY);
-    char buffer[BUFFER_SIZE];
-    fd_set read_fds;
-    struct timeval timeout;
-
-    if (file_fd < 0) {
-        perror("File open failed");
-        return;
-    }
-
-    while (1) {
-        FD_ZERO(&read_fds);
-        FD_SET(sock_fd, &read_fds);
-
-        timeout.tv_sec = 3;
-        timeout.tv_usec = 0;
-
-        memset(buffer, 0, BUFFER_SIZE);
-        int bytes_read = read(file_fd, buffer, BUFFER_SIZE);
-
-        if (bytes_read > 0) {
-            send(sock_fd, buffer, bytes_read, 0);
-            sleep(1);
-        } else {
-            break;
-        }
-
-        if (select(sock_fd + 1, &read_fds, NULL, NULL, &timeout) > 0) {
-            memset(buffer, 0, BUFFER_SIZE);
-            int bytes_received = recv(sock_fd, buffer, BUFFER_SIZE, 0);
-            if (bytes_received > 0) {
-                printf("Received: %s", buffer);
-            }
-        }
-    }
-
-    close(file_fd);
-}
-
-void receiver_mode(int sock_fd) {
-    char buffer[BUFFER_SIZE];
-    fd_set read_fds;
-
-    while (1) {
-        FD_ZERO(&read_fds);
-        FD_SET(sock_fd, &read_fds);
-
-        if (select(sock_fd + 1, &read_fds, NULL, NULL, NULL) > 0) {
-            memset(buffer, 0, BUFFER_SIZE);
-            int bytes_received = recv(sock_fd, buffer, BUFFER_SIZE, 0);
-            if (bytes_received > 0) {
-                printf("Echoing back: %s", buffer);
-                send(sock_fd, buffer, bytes_received, 0);
-            }
-        }
-    }
 }
