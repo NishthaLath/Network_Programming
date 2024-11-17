@@ -43,14 +43,14 @@ int main() {
         perror("Accept failed for Client #1");
         exit(EXIT_FAILURE);
     }
-    printf("Client Connected : %d (fd_max: %d)\n", client1_fd, server_fd);
+    printf("Client Connected : %d (fd_max: %d)\n", client1_fd, client1_fd);
 
     client2_fd = accept(server_fd, NULL, NULL);
     if (client2_fd < 0) {
         perror("Accept failed for Client #2");
         exit(EXIT_FAILURE);
     }
-    printf("Client Connected : %d (fd_max: %d)\n", client2_fd, server_fd);
+    printf("Client Connected : %d (fd_max: %d)\n", client2_fd, client2_fd);
 
     FD_ZERO(&read_fds);
     FD_SET(client1_fd, &read_fds);
