@@ -30,6 +30,7 @@ int main(int argc, char *argv[]) {
     char name[BUF_SIZE];
     snprintf(name, BUF_SIZE, "[%s] ", argv[3]);
 
+    // Create receiving socket
     recv_sock = socket(PF_INET, SOCK_DGRAM, 0);
     if (recv_sock == -1) error_handling("socket() error");
 
@@ -50,6 +51,7 @@ int main(int argc, char *argv[]) {
     if (setsockopt(recv_sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void*)&join_addr, sizeof(join_addr)) == -1)
         error_handling("setsockopt() error (IP_ADD_MEMBERSHIP)");
 
+    // Create sending socket
     send_sock = socket(PF_INET, SOCK_DGRAM, 0);
     if (send_sock == -1) error_handling("socket() error");
 
@@ -72,7 +74,10 @@ int main(int argc, char *argv[]) {
     if (pid == 0) { // Child Process: Receiver
         while (1) {
             int str_len = recvfrom(recv_sock, buf, BUF_SIZE - 1, 0, NULL, 0);
-            if (str_len < 0) break;
+            if (str_len < 0) {
+                perror("recvfrom() error");
+                break;
+            }
             buf[str_len] = 0;
             printf("%s\n", buf);
             fflush(stdout); // Ensure immediate output
@@ -86,7 +91,8 @@ int main(int argc, char *argv[]) {
                 break;
             }
             snprintf(buf + strlen(name), BUF_SIZE - strlen(name), "%s", buf);
-            sendto(send_sock, buf, strlen(buf), 0, (struct sockaddr*)&send_addr, sizeof(send_addr));
+            if (sendto(send_sock, buf, strlen(buf), 0, (struct sockaddr*)&send_addr, sizeof(send_addr)) == -1)
+                perror("sendto() error");
         }
         close(send_sock);
     }
