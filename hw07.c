@@ -62,6 +62,10 @@ int main(int argc, char *argv[]) {
     if (setsockopt(send_sock, IPPROTO_IP, IP_MULTICAST_TTL, (void*)&ttl, sizeof(ttl)) == -1)
         error_handling("setsockopt() error (IP_MULTICAST_TTL)");
 
+    int loopback = 1;
+    if (setsockopt(send_sock, IPPROTO_IP, IP_MULTICAST_LOOP, &loopback, sizeof(loopback)) < 0)
+        error_handling("setsockopt() error (IP_MULTICAST_LOOP)");
+
     pid = fork();
     if (pid == -1) error_handling("fork() error");
 
@@ -71,6 +75,7 @@ int main(int argc, char *argv[]) {
             if (str_len < 0) break;
             buf[str_len] = 0;
             printf("%s\n", buf);
+            fflush(stdout); // Ensure immediate output
         }
         close(recv_sock);
     } else { // Parent Process: Sender
