@@ -33,6 +33,10 @@ int main(int argc, char *argv[]) {
     recv_sock = socket(PF_INET, SOCK_DGRAM, 0);
     if (recv_sock == -1) error_handling("socket() error");
 
+    int reuse = 1;
+    if (setsockopt(recv_sock, SOL_SOCKET, SO_REUSEADDR, (void*)&reuse, sizeof(reuse)) == -1)
+        error_handling("setsockopt() error (SO_REUSEADDR)");
+
     memset(&recv_addr, 0, sizeof(recv_addr));
     recv_addr.sin_family = AF_INET;
     recv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
