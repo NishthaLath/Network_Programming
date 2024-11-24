@@ -7,6 +7,7 @@
 #include <signal.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <errno.h>
 
 #define BUF_SIZE 120
 #define TTL 64
@@ -27,49 +28,64 @@ int main(int argc, char *argv[]) {
     struct ip_mreq join_addr;
     pid_t pid;
     char buf[BUF_SIZE];
-    char name[BUF_SIZE];
-    snprintf(name, BUF_SIZE, "[%s] ", argv[3]);
+    char message[BUF_SIZE];
+    snprintf(message, BUF_SIZE, "[%s] ", argv[3]);
 
     // Create receiving socket
     recv_sock = socket(PF_INET, SOCK_DGRAM, 0);
-    if (recv_sock == -1) error_handling("socket() error");
+    if (recv_sock == -1) {
+        error_handling("recv_sock socket() error");
+    }
 
     int reuse = 1;
     if (setsockopt(recv_sock, SOL_SOCKET, SO_REUSEADDR, (void*)&reuse, sizeof(reuse)) == -1)
-        error_handling("setsockopt() error (SO_REUSEADDR)");
+        error_handling("recv_sock setsockopt() error (SO_REUSEADDR)");
+
+    // Enable multicast loopback on recv_sock
+    int loop = 1;
+    if (setsockopt(recv_sock, IPPROTO_IP, IP_MULTICAST_LOOP, &loop, sizeof(loop)) < 0)
+        error_handling("recv_sock setsockopt() error (IP_MULTICAST_LOOP)");
 
     memset(&recv_addr, 0, sizeof(recv_addr));
     recv_addr.sin_family = AF_INET;
-    recv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    recv_addr.sin_addr.s_addr = htonl(INADDR_ANY); // Bind to all interfaces
     recv_addr.sin_port = htons(atoi(argv[2]));
 
     if (bind(recv_sock, (struct sockaddr*)&recv_addr, sizeof(recv_addr)) == -1)
-        error_handling("bind() error");
+        error_handling("recv_sock bind() error");
 
-    join_addr.imr_multiaddr.s_addr = inet_addr(argv[1]);
-    join_addr.imr_interface.s_addr = htonl(INADDR_ANY);
+    join_addr.imr_multiaddr.s_addr = inet_addr(argv[1]); // Multicast group IP
+    join_addr.imr_interface.s_addr = htonl(INADDR_ANY);  // Use all available interfaces
+
     if (setsockopt(recv_sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void*)&join_addr, sizeof(join_addr)) == -1)
-        error_handling("setsockopt() error (IP_ADD_MEMBERSHIP)");
+        error_handling("recv_sock setsockopt() error (IP_ADD_MEMBERSHIP)");
 
     // Create sending socket
     send_sock = socket(PF_INET, SOCK_DGRAM, 0);
-    if (send_sock == -1) error_handling("socket() error");
+    if (send_sock == -1) {
+        error_handling("send_sock socket() error");
+    }
+
+    int send_reuse = 1;
+    if (setsockopt(send_sock, SOL_SOCKET, SO_REUSEADDR, (void*)&send_reuse, sizeof(send_reuse)) == -1)
+        error_handling("send_sock setsockopt() error (SO_REUSEADDR)");
 
     memset(&send_addr, 0, sizeof(send_addr));
     send_addr.sin_family = AF_INET;
-    send_addr.sin_addr.s_addr = inet_addr(argv[1]);
+    send_addr.sin_addr.s_addr = inet_addr(argv[1]); // Multicast group IP
     send_addr.sin_port = htons(atoi(argv[2]));
 
     int ttl = TTL;
     if (setsockopt(send_sock, IPPROTO_IP, IP_MULTICAST_TTL, (void*)&ttl, sizeof(ttl)) == -1)
-        error_handling("setsockopt() error (IP_MULTICAST_TTL)");
+        error_handling("send_sock setsockopt() error (IP_MULTICAST_TTL)");
 
-    int loopback = 1;
-    if (setsockopt(send_sock, IPPROTO_IP, IP_MULTICAST_LOOP, &loopback, sizeof(loopback)) < 0)
-        error_handling("setsockopt() error (IP_MULTICAST_LOOP)");
+    // Enable multicast loopback on send_sock
+    if (setsockopt(send_sock, IPPROTO_IP, IP_MULTICAST_LOOP, &loop, sizeof(loop)) < 0)
+        error_handling("send_sock setsockopt() error (IP_MULTICAST_LOOP)");
 
     pid = fork();
-    if (pid == -1) error_handling("fork() error");
+    if (pid == -1)
+        error_handling("fork() error");
 
     if (pid == 0) { // Child Process: Receiver
         while (1) {
@@ -79,19 +95,24 @@ int main(int argc, char *argv[]) {
                 break;
             }
             buf[str_len] = 0;
-            printf("%s\n", buf);
+            printf("%s", buf);
             fflush(stdout); // Ensure immediate output
         }
         close(recv_sock);
     } else { // Parent Process: Sender
         while (1) {
-            fgets(buf, BUF_SIZE - strlen(name), stdin);
-            if (!strcmp(buf, "q\n") || !strcmp(buf, "Q\n")) {
-                kill(pid, SIGKILL);
+            fflush(stdout);
+            if (fgets(buf, BUF_SIZE - strlen(message), stdin) == NULL) {
+                perror("fgets() error");
                 break;
             }
-            snprintf(buf + strlen(name), BUF_SIZE - strlen(name), "%s", buf);
-            if (sendto(send_sock, buf, strlen(buf), 0, (struct sockaddr*)&send_addr, sizeof(send_addr)) == -1)
+            if (!strcmp(buf, "q\n") || !strcmp(buf, "Q\n")) {
+                kill(pid, SIGKILL);
+                printf("Exiting...\n");
+                break;
+            }
+            snprintf(message + strlen(argv[3]) + 2, BUF_SIZE - strlen(message), "%s", buf);
+            if (sendto(send_sock, message, strlen(message), 0, (struct sockaddr*)&send_addr, sizeof(send_addr)) == -1)
                 perror("sendto() error");
         }
         close(send_sock);
