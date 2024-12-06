@@ -39,15 +39,14 @@ void print_board() {
     printf("Occupied: %d\n", occupied_cells);
 }
 
-// BFS for contiguous region calculation (only horizontal/vertical connections considered)
+// BFS for contiguous region calculation (only the adjacent horizontal and vertical cells are considered)
 int bfs(int visited[ROW][COL], int client_id, int x, int y, int output_board[ROW][COL]) {
     int dx[] = {0, 0, 1, -1};
     int dy[] = {1, -1, 0, 0};
-    int size = 0;
+    int size = 1;
 
     visited[x][y] = 1;
     output_board[x][y] = client_id;
-    size++;
 
     for (int i = 0; i < 4; ++i) {
         int nx = x + dx[i];
