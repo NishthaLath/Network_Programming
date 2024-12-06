@@ -50,9 +50,11 @@ void* recv_msg(void* arg) {
             printf("\n+----------------------------------+\n");
         }
 
+        // Log the server's response
+        printf("[Rx] cmd: %d, result: %d\n", res.cmd, res.result);
+
         // Check if the game has ended
         if (res.cmd == 3) { // Command for GAME_END
-            printf("[Rx] cmd: %d, result: %d\n", res.cmd, res.result);
             printf("GAME_END. Game is over!\n");
             running = 0; // Stop the client
         }
@@ -77,6 +79,10 @@ void* send_msg(void* arg) {
             running = 0; // Stop if the connection is lost
             break;
         }
+
+        // Log the request sent to the server
+        printf("[Tx] cmd: %d, index(%d, %d)\n", req.cmd, req.row, req.col);
+
         sleep(1); // Pause for 1 second before the next move
     }
     return NULL;
