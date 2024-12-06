@@ -37,13 +37,13 @@ void* recv_msg(void* arg) {
         }
 
         // Print the board state
-        printf("+-------------------------------+\n");
+        printf("+------------------------------------+\n");
         for (int i = 0; i < ROW; ++i) {
             printf("|");
             for (int j = 0; j < COL; ++j) {
                 printf(" %2d |", res.board[i][j]);
             }
-            printf("\n+-------------------------------+\n");
+            printf("\n+------------------------------------+\n");
         }
         
         // Check for GAME_END signal from server
