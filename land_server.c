@@ -41,27 +41,23 @@ void print_board() {
 
 // BFS for contiguous region calculation (only horizontal/vertical connections considered)
 int bfs(int visited[ROW][COL], int client_id, int x, int y, int output_board[ROW][COL]) {
-    int queue[ROW * COL][2], front = 0, rear = 0, size = 0;
-    int directions[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}}; // Only vertical and horizontal directions
+    int dx[] = {0, 0, 1, -1};
+    int dy[] = {1, -1, 0, 0};
+    int size = 0;
 
-    queue[rear][0] = x;
-    queue[rear++][1] = y;
     visited[x][y] = 1;
+    output_board[x][y] = client_id;
+    size++;
 
-    while (front < rear) {
-        int cx = queue[front][0], cy = queue[front++][1];
-        size++;
-        output_board[cx][cy] = client_id; // Mark the grid for visual display
-        for (int d = 0; d < 4; ++d) {
-            int nx = cx + directions[d][0], ny = cy + directions[d][1];
-            if (nx >= 0 && nx < ROW && ny >= 0 && ny < COL &&
-                !visited[nx][ny] && board[nx][ny] == client_id) {
-                visited[nx][ny] = 1;
-                queue[rear][0] = nx;
-                queue[rear++][1] = ny;
-            }
+    for (int i = 0; i < 4; ++i) {
+        int nx = x + dx[i];
+        int ny = y + dy[i];
+
+        if (nx >= 0 && nx < ROW && ny >= 0 && ny < COL && !visited[nx][ny] && board[nx][ny] == client_id) {
+            size += bfs(visited, client_id, nx, ny, output_board);
         }
     }
+
     return size;
 }
 
