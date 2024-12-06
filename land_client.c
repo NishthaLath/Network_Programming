@@ -24,15 +24,19 @@ typedef struct {
 
 int running = 1;
 
+// Function to receive messages from the server
 void* recv_msg(void* arg) {
     int sock = *(int*)arg;
     RES_PACKET res;
     
     while (running) {
         // Receive server response
-        if (recv(sock, &res, sizeof(res), 0) <= 0) break;
+        if (recv(sock, &res, sizeof(res), 0) <= 0) {
+            running = 0;
+            break;
+        }
 
-        // Print board state and result
+        // Print the board state
         printf("+-------------------------------+\n");
         for (int i = 0; i < ROW; ++i) {
             printf("|");
@@ -41,7 +45,9 @@ void* recv_msg(void* arg) {
             }
             printf("\n+-------------------------------+\n");
         }
-        if (res.cmd == 3) { // GAME_END
+        
+        // Check for GAME_END signal from server
+        if (res.cmd == 3) {
             printf("GAME_END. Game is over!\n");
             running = 0;
         }
@@ -49,19 +55,24 @@ void* recv_msg(void* arg) {
     return NULL;
 }
 
+// Function to send messages to the server
 void* send_msg(void* arg) {
     int sock = *(int*)arg;
     REQ_PACKET req;
     
-    srand(time(NULL));
+    srand(time(NULL)); // Initialize random number generator
+    
     while (running) {
         req.cmd = 1; // GAME_REQUEST
         req.row = rand() % ROW;
         req.col = rand() % COL;
-        
-        // Send random position to server
-        send(sock, &req, sizeof(req), 0);
-        sleep(1);
+
+        // Send the randomly selected position to the server
+        if (send(sock, &req, sizeof(req), 0) <= 0) {
+            running = 0;
+            break;
+        }
+        sleep(1); // Pause for 1 second before the next move
     }
     return NULL;
 }
@@ -76,23 +87,33 @@ int main(int argc, char* argv[]) {
     struct sockaddr_in server_addr;
     pthread_t recv_thread, send_thread;
     
-    // Create socket
+    // Create a socket
     sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) {
+        perror("Socket creation failed");
+        return -1;
+    }
+    
+    // Configure server address
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(atoi(argv[2]));
-    inet_pton(AF_INET, argv[1], &server_addr.sin_addr);
+    if (inet_pton(AF_INET, argv[1], &server_addr.sin_addr) <= 0) {
+        perror("Invalid address/ Address not supported");
+        return -1;
+    }
     
-    // Connect to server
+    // Connect to the server
     if (connect(sock, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-        printf("Connection failed.\n");
+        perror("Connection to server failed");
         return -1;
     }
     printf("Connected to server.\n");
 
-    // Start threads for sending and receiving messages
+    // Create threads for sending and receiving messages
     pthread_create(&recv_thread, NULL, recv_msg, &sock);
     pthread_create(&send_thread, NULL, send_msg, &sock);
     
+    // Wait for threads to complete
     pthread_join(recv_thread, NULL);
     pthread_join(send_thread, NULL);
     
