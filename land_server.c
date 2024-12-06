@@ -28,58 +28,63 @@ int occupied_cells = 0;
 
 // Function to display the game board
 void print_board() {
-    printf("+----------------------------------+\n");
+    printf("+-------------------------------+\n");
     for (int i = 0; i < ROW; ++i) {
         printf("|");
         for (int j = 0; j < COL; ++j) {
             printf(" %2d |", board[i][j]);
         }
-        printf("\n+----------------------------------+\n");
+        printf("\n+-------------------------------+\n");
     }
     printf("Occupied: %d\n", occupied_cells);
 }
 
-// BFS for contiguous region calculation (only the adjacent horizontal and vertical cells are considered)
-int bfs(int visited[ROW][COL], int client_id, int x, int y, int output_board[ROW][COL]) {
-    int dx[] = {0, 0, 1, -1};
-    int dy[] = {1, -1, 0, 0};
-    int size = 1;
+// Function to find and visualize contiguous regions without BFS/DFS
+int Continuous_space(int client_id, int output_board[ROW][COL]) {
+    int visited[ROW][COL] = {0}; // To mark cells already part of a region
+    int total_size = 0;
 
-    visited[x][y] = 1;
-    output_board[x][y] = client_id;
+    for (int i = 0; i < ROW; ++i) {
+        for (int j = 0; j < COL; ++j) {
+            // Check if the cell belongs to the current client ID and hasn't been visited
+            if (board[i][j] == client_id && !visited[i][j]) {
+                int region_size = 0;
 
-    for (int i = 0; i < 4; ++i) {
-        int nx = x + dx[i];
-        int ny = y + dy[i];
+                // Start a new region and mark all directly connected cells
+                for (int x = i; x < ROW && board[x][j] == client_id; x++) {
+                    if (!visited[x][j]) {
+                        output_board[x][j] = client_id;
+                        visited[x][j] = 1;
+                        region_size++;
+                    }
+                }
 
-        if (nx >= 0 && nx < ROW && ny >= 0 && ny < COL && !visited[nx][ny] && board[nx][ny] == client_id) {
-            size += bfs(visited, client_id, nx, ny, output_board);
+                for (int y = j; y < COL && board[i][y] == client_id; y++) {
+                    if (!visited[i][y]) {
+                        output_board[i][y] = client_id;
+                        visited[i][y] = 1;
+                        region_size++;
+                    }
+                }
+
+                total_size += region_size;
+            }
         }
     }
 
-    return size;
+    return total_size;
 }
 
 // Calculate and display contiguous regions visually
 void calculate_regions() {
-    int visited[ROW][COL] = {0};
-
     for (int id = 4; id <= 6; ++id) {
         printf("[Client %d] Continuous Space\n", id);
 
         int output_board[ROW][COL] = {0};
-        int total_size = 0;
-
-        for (int i = 0; i < ROW; ++i) {
-            for (int j = 0; j < COL; ++j) {
-                if (!visited[i][j] && board[i][j] == id) {
-                    total_size += bfs(visited, id, i, j, output_board);
-                }
-            }
-        }
+        int total_size = Continuous_space(id, output_board);
 
         // Display the grid visually for the client
-        printf("+----------------------------------+\n");
+        printf("+-------------------------------+\n");
         for (int i = 0; i < ROW; ++i) {
             printf("|");
             for (int j = 0; j < COL; ++j) {
@@ -89,7 +94,7 @@ void calculate_regions() {
                     printf("    |"); // Empty space elsewhere
                 }
             }
-            printf("\n+----------------------------------+\n");
+            printf("\n+-------------------------------+\n");
         }
         printf("Space size: %d\n\n", total_size);
     }
