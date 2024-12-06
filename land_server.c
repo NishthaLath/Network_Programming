@@ -28,13 +28,13 @@ int occupied_cells = 0;
 
 // Function to display the game board
 void print_board() {
-    printf("+------------------------------------+\n");
+    printf("+----------------------------------+\n");
     for (int i = 0; i < ROW; ++i) {
         printf("|");
         for (int j = 0; j < COL; ++j) {
             printf(" %2d |", board[i][j]);
         }
-        printf("\n+------------------------------------+\n");
+        printf("\n+----------------------------------+\n");
     }
     printf("Occupied: %d\n", occupied_cells);
 }
@@ -80,7 +80,7 @@ void calculate_regions() {
         }
 
         // Display the grid visually for the client
-        printf("+------------------------------------+\n");
+        printf("+----------------------------------+\n");
         for (int i = 0; i < ROW; ++i) {
             printf("|");
             for (int j = 0; j < COL; ++j) {
@@ -90,7 +90,7 @@ void calculate_regions() {
                     printf("    |"); // Empty space elsewhere
                 }
             }
-            printf("\n+------------------------------------+\n");
+            printf("\n+----------------------------------+\n");
         }
         printf("Space size: %d\n\n", total_size);
     }
