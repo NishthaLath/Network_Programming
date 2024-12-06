@@ -39,7 +39,23 @@ void print_board() {
     printf("Occupied: %d\n", occupied_cells);
 }
 
-// Function to find and visualize contiguous regions without BFS/DFS
+// Helper function for flood fill
+void flood_fill(int x, int y, int client_id, int visited[ROW][COL], int output_board[ROW][COL], int *region_size) {
+    if (x < 0 || x >= ROW || y < 0 || y >= COL || visited[x][y] || board[x][y] != client_id) {
+        return;
+    }
+
+    visited[x][y] = 1;
+    output_board[x][y] = client_id;
+    (*region_size)++;
+
+    // Explore neighbors (horizontally and vertically)
+    flood_fill(x + 1, y, client_id, visited, output_board, region_size);
+    flood_fill(x - 1, y, client_id, visited, output_board, region_size);
+    flood_fill(x, y + 1, client_id, visited, output_board, region_size);
+    flood_fill(x, y - 1, client_id, visited, output_board, region_size);
+}
+
 int Continuous_space(int client_id, int output_board[ROW][COL]) {
     int visited[ROW][COL] = {0}; // To mark cells already part of a region
     int total_size = 0;
@@ -49,24 +65,7 @@ int Continuous_space(int client_id, int output_board[ROW][COL]) {
             // Check if the cell belongs to the current client ID and hasn't been visited
             if (board[i][j] == client_id && !visited[i][j]) {
                 int region_size = 0;
-
-                // Start a new region and mark all directly connected cells
-                for (int x = i; x < ROW && board[x][j] == client_id; x++) {
-                    if (!visited[x][j]) {
-                        output_board[x][j] = client_id;
-                        visited[x][j] = 1;
-                        region_size++;
-                    }
-                }
-
-                for (int y = j; y < COL && board[i][y] == client_id; y++) {
-                    if (!visited[i][y]) {
-                        output_board[i][y] = client_id;
-                        visited[i][y] = 1;
-                        region_size++;
-                    }
-                }
-
+                flood_fill(i, j, client_id, visited, output_board, &region_size);
                 total_size += region_size;
             }
         }
