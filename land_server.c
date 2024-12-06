@@ -39,37 +39,39 @@ void print_board() {
     printf("Occupied: %d\n", occupied_cells);
 }
 
-// Helper function for flood fill
-void flood_fill(int x, int y, int client_id, int visited[ROW][COL], int output_board[ROW][COL], int *region_size) {
-    if (x < 0 || x >= ROW || y < 0 || y >= COL || visited[x][y] || board[x][y] != client_id) {
-        return;
+// Validate if a cell has at least one horizontal/vertical neighbor
+int Valid_Space(int x, int y, int client_id) {
+    int directions[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}}; // Horizontal and vertical directions
+
+    for (int d = 0; d < 4; ++d) {
+        int nx = x + directions[d][0];
+        int ny = y + directions[d][1];
+
+        if (nx >= 0 && nx < ROW && ny >= 0 && ny < COL && board[nx][ny] == client_id) {
+            return 1; // Found a valid neighbor
+        }
     }
-
-    visited[x][y] = 1;
-    output_board[x][y] = client_id;
-    (*region_size)++;
-
-    // Explore neighbors (horizontally and vertically)
-    flood_fill(x + 1, y, client_id, visited, output_board, region_size);
-    flood_fill(x - 1, y, client_id, visited, output_board, region_size);
-    flood_fill(x, y + 1, client_id, visited, output_board, region_size);
-    flood_fill(x, y - 1, client_id, visited, output_board, region_size);
+    return 0; // No valid neighbors
 }
 
-int Continuous_space(int client_id, int output_board[ROW][COL]) {
-    int visited[ROW][COL] = {0}; // To mark cells already part of a region
+// Function to calculate and visualize valid contiguous regions
+int Continuous_Space(int client_id, int output_board[ROW][COL])
+{
+    int visited[ROW][COL] = {0};
     int total_size = 0;
 
     for (int i = 0; i < ROW; ++i) {
         for (int j = 0; j < COL; ++j) {
-            // Check if the cell belongs to the current client ID and hasn't been visited
             if (board[i][j] == client_id && !visited[i][j]) {
-                int region_size = 0;
-                flood_fill(i, j, client_id, visited, output_board, &region_size);
-                total_size += region_size;
+                if (Valid_Space(i, j, client_id)) {
+                    // Mark as part of a valid contiguous region
+                    visited[i][j] = 1;
+                    output_board[i][j] = client_id;
+                    total_size++;
+                }
             }
         }
-    }
+    } // Continuous_Space
 
     return total_size;
 }
@@ -80,7 +82,7 @@ void calculate_regions() {
         printf("[Client %d] Continuous Space\n", id);
 
         int output_board[ROW][COL] = {0};
-        int total_size = Continuous_space(id, output_board);
+        int total_size = Continuous_Space(id, output_board);
 
         // Display the grid visually for the client
         printf("+----------------------------------+\n");
