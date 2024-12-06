@@ -40,7 +40,7 @@ void print_board() {
 }
 
 // BFS for contiguous region calculation
-int bfs(int visited[ROW][COL], int client_id, int x, int y) {
+int bfs(int visited[ROW][COL], int client_id, int x, int y, int output_board[ROW][COL]) {
     int queue[ROW * COL][2], front = 0, rear = 0, size = 0;
     int directions[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
@@ -51,6 +51,7 @@ int bfs(int visited[ROW][COL], int client_id, int x, int y) {
     while (front < rear) {
         int cx = queue[front][0], cy = queue[front++][1];
         size++;
+        output_board[cx][cy] = client_id; // Mark the grid for visual display
         for (int d = 0; d < 4; ++d) {
             int nx = cx + directions[d][0], ny = cy + directions[d][1];
             if (nx >= 0 && nx < ROW && ny >= 0 && ny < COL &&
@@ -64,21 +65,38 @@ int bfs(int visited[ROW][COL], int client_id, int x, int y) {
     return size;
 }
 
-// Calculate contiguous regions
+// Calculate and display contiguous regions visually
 void calculate_regions() {
     int visited[ROW][COL] = {0};
+
     for (int id = 4; id <= 6; ++id) {
         printf("[Client %d] Continuous Space\n", id);
+
+        int output_board[ROW][COL] = {0};
         int total_size = 0;
+
         for (int i = 0; i < ROW; ++i) {
             for (int j = 0; j < COL; ++j) {
                 if (!visited[i][j] && board[i][j] == id) {
-                    int size = bfs(visited, id, i, j);
-                    total_size += size;
+                    total_size += bfs(visited, id, i, j, output_board);
                 }
             }
         }
-        printf("Space size: %d\n", total_size);
+
+        // Display the grid visually for the client
+        printf("+-------------------------------+\n");
+        for (int i = 0; i < ROW; ++i) {
+            printf("|");
+            for (int j = 0; j < COL; ++j) {
+                if (output_board[i][j] == id) {
+                    printf(" %2d |", id); // Show the client ID in the contiguous region
+                } else {
+                    printf("    |"); // Empty space elsewhere
+                }
+            }
+            printf("\n+-------------------------------+\n");
+        }
+        printf("Space size: %d\n\n", total_size);
     }
 }
 
